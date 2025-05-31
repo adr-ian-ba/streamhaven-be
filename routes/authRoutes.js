@@ -79,21 +79,34 @@ router.post('/register', async (req, res) => {
 
         
         const savedMovie = req.body.savedMovie;
-        if (Array.isArray(savedMovie) && savedMovie.length > 0) {
-        // Merge guest data folders
-        const validFolders = ["Liked", "Watchlater", "History"];
 
-        savedMovie
-            .filter(f => validFolders.includes(f.folder_name))
-            .forEach(folder => {
+        if (Array.isArray(savedMovie) && savedMovie.length > 0) {
+        const validFolders = ["Liked", "Watchlater"];
+
+        savedMovie.forEach(folder => {
             const cleaned = folder.saved.slice(0, 10);
+
+            if (folder.folder_name === "History") {
+            // Normalize history structure
+            const cleanedHistory = cleaned.map(item => ({
+                id: item.id,
+                title: item.title,
+                poster_path: item.poster_path,
+                media_type: item.media_type,
+                watchedAt: item.watchedAt || new Date()
+            }));
+
+            newUser.history = cleanedHistory;
+            } else if (validFolders.includes(folder.folder_name)) {
             newUser.folders.push({ folder_name: folder.folder_name, saved: cleaned });
-            });
+            }
+        });
         } else {
         // No guest data — create empty default folders
         newUser.folders.push({ folder_name: "Liked", saved: [] });
         newUser.folders.push({ folder_name: "Watchlater", saved: [] });
         }
+
 
         await newUser.save();
 
