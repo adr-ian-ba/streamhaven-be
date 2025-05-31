@@ -1,0 +1,59 @@
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import syncRoutes from './routes/syncRoutes.js';
+
+dotenv.config();
+const mongodbLink = process.env.MONGODB_CONNECTION_LINK_LEGACY
+
+const app = express();
+
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+app.use(express.text());
+
+const globalLimiter = rateLimit({
+    windowMs: 10 * 1000,
+    max: 20,
+    message: { message: "Too many requests, slow down!" },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        console.log(`🚨 Rate limit exceeded: ${req.ip}`);
+        res.status(429).json({ message: "Too many requests, slow down!" });
+    }
+});
+
+app.use(globalLimiter);
+
+// Attach route handlers
+app.use('/auth', authRoutes);
+app.use('/user', userRoutes);
+app.use('/media', mediaRoutes);
+app.use('/admin', adminRoutes);
+app.use('/sync', syncRoutes);
+
+app.get('/test', (req, res) => res.send('hehe'));
+
+async function startServer() {
+    try {
+        await mongoose.connect(mongodbLink, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log('Connected to DB');
+        app.listen(3000, () => console.log('Server started on port 3000'));
+    } catch (err) {
+        console.error('DB Connection Error:', err);
+        process.exit(1);
+    }
+}
+
+startServer();
