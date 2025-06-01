@@ -354,11 +354,29 @@ router.post('/resetpass', async (req, res) => {
         });
 
         const mail = {
-            from: emailUser,
-            to: user.email,
-            subject: "Stream Haven Password Reset",
-            html: `<a target='_blank' href='${serverAddress}/resetpass/${user.email}/${otp.otp}'>Click here</a>`
+        from: emailUser,
+        to: user.email,
+        subject: "Stream Haven Password Reset",
+        html: `
+            <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 24px;">
+            <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h2 style="color: #333;">🔐 Stream Haven Password Reset</h2>
+                <p style="color: #555;">We received a request to reset your password. Click the button below to proceed:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                <a href="https://streamhaven.onrender.com/resetpass/${user.email}/${otp.otp}"
+                    style="background-color: #0066ff; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                    Reset My Password
+                </a>
+                </div>
+                <p style="color: #999; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                <p style="color: #999; font-size: 14px;">This link will expire in 10 minutes.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
+                <p style="color: #ccc; font-size: 12px; text-align: center;">Stream Haven • streamhaven.onrender.com</p>
+            </div>
+            </div>
+        `
         };
+
 
         transporter.sendMail(mail);
 
