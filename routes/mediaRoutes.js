@@ -38,6 +38,11 @@ const formatMovie = async (movie, type) => {
     );
   }
 
+  const formattedSeasons = movie.seasons?.map((season) => ({
+    ...season,
+    poster_path: formatPoster(season.poster_path),
+  }));
+
   return {
     ...movie,
     title: movie.title || movie.name,
@@ -47,9 +52,11 @@ const formatMovie = async (movie, type) => {
     backdrop_path: formatBackdrop(movie.backdrop_path),
     genres: movie.genres || genreData,
     genre_ids: undefined,
+    seasons: formattedSeasons,
     recommendations: formattedRecommendations.length ? formattedRecommendations : undefined
   };
 };
+
 
 
 // ========== Get trending from DB ==========
@@ -115,22 +122,25 @@ router.get('/getmovies/:type/:category?/:page?', async (req, res) => {
                 ]);
                 return res.status(200).json({ message: "Success", condition: true, result: { now: now.results, popular: popular.results, top: top.results, upcoming: upcoming.results } });
             }
-        } else if (type === "SR") {
-            if (category && page) {
-                let endpoint = `/tv/${category}?language=en-US&page=${page}`;
-                if (category === "top") endpoint = `/tv/top_rated?language=en-US&page=${page}`;
-                const data = await buildResult(endpoint, "SR");
-                return res.status(200).json({ message: "Success", condition: true, result: data });
-            } else {
-                const [popular, top, airing, nextSeven] = await Promise.all([
-                    buildResult("/tv/popular?language=en-US&page=1", "SR"),
-                    buildResult("/tv/top_rated?language=en-US&page=1", "SR"),
-                    buildResult("/tv/airing_today?language=en-US&page=1", "SR"),
-                    buildResult("/tv/on_the_air?language=en-US&page=1", "SR")
-                ]);
-                return res.status(200).json({ message: "Success", condition: true, result: { popular: popular.results, top: top.results, airing: airing.results, nextSeven: nextSeven.results } });
-            }
         }
+            else if (type === "SR") {
+            const serieDetail = await apiHelper.get(`/tv/${id}?append_to_response=recommendations&language=en-US`);
+            const seasonDetail = await apiHelper.get(`/tv/${id}/season/${ss}?language=en-US`);
+
+            let result = await formatMovie(serieDetail);
+            
+            result.selected_season = {
+                ...seasonDetail,
+                poster_path: formatPoster(seasonDetail.poster_path),
+            };
+
+            return res.status(200).json({
+                message: "Movie Fetch Success",
+                condition: true,
+                result,
+            });
+            }
+
 
     } catch (err) {
         console.error(err);
