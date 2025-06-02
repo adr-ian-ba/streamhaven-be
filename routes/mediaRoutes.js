@@ -124,22 +124,35 @@ router.get('/getmovies/:type/:category?/:page?', async (req, res) => {
             }
         }
             else if (type === "SR") {
-            const serieDetail = await apiHelper.get(`/tv/${id}?append_to_response=recommendations&language=en-US`);
-            const seasonDetail = await apiHelper.get(`/tv/${id}/season/${ss}?language=en-US`);
+                if (category && page) {
+                    let endpoint = `/tv/${category}?language=en-US&page=${page}`;
+                    if (category === "top") endpoint = `/tv/top_rated?language=en-US&page=${page}`;
+                    if (category === "airing") endpoint = `/tv/airing_today?language=en-US&page=${page}`;
+                    if (category === "next-seven") endpoint = `/tv/on_the_air?language=en-US&page=${page}`;
 
-            let result = await formatMovie(serieDetail);
-            
-            result.selected_season = {
-                ...seasonDetail,
-                poster_path: formatPoster(seasonDetail.poster_path),
-            };
+                    const data = await buildResult(endpoint, "SR");
+                    return res.status(200).json({ message: "Success", condition: true, result: data });
+                } else {
+                    const [popular, top, airing, nextSeven] = await Promise.all([
+                        buildResult("/tv/popular?language=en-US&page=1", "SR"),
+                        buildResult("/tv/top_rated?language=en-US&page=1", "SR"),
+                        buildResult("/tv/airing_today?language=en-US&page=1", "SR"),
+                        buildResult("/tv/on_the_air?language=en-US&page=1", "SR"),
+                    ]);
 
-            return res.status(200).json({
-                message: "Movie Fetch Success",
-                condition: true,
-                result,
-            });
+                    return res.status(200).json({
+                        message: "Success",
+                        condition: true,
+                        result: {
+                            popular: popular.results,
+                            top: top.results,
+                            airing: airing.results,
+                            nextSeven: nextSeven.results,
+                        }
+                    });
+                }
             }
+
 
 
     } catch (err) {
