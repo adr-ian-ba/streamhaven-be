@@ -56,109 +56,123 @@ router.delete("/delete-account", authMiddleware, async (req, res) => {
 // ========== REGISTER ==========
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, savedMovie } = req.body;
+
         if (!username || !email || !password) {
             return res.status(200).json({ message: "All fields are required", condition: false });
         }
+
         if (username.length < 3 || username.length > 15 || /\s/.test(username) || !/^[a-zA-Z0-9._]+$/.test(username)) {
             return res.status(200).json({ message: "Invalid username", condition: false });
         }
+
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return res.status(200).json({ message: "Invalid email", condition: false });
         }
+
         if (password.length < 8) {
             return res.status(200).json({ message: "Password too short", condition: false });
         }
 
         const normalizedEmail = email.toLowerCase();
-        const existing = await User.findOne({ email: normalizedEmail });
-        if (existing) return res.status(200).json({ message: "Email already registered", condition: false });
-
         const hashedPassword = await bcrypt.hash(password, salt);
-        const newUser = await User.create({ username, email: normalizedEmail, password: hashedPassword });
+        let userToUse;
 
-        
-        const savedMovie = req.body.savedMovie;
-
-        if (Array.isArray(savedMovie) && savedMovie.length > 0) {
-        const validFolders = ["Liked", "Watchlater"];
-
-        savedMovie.forEach(folder => {
-            const cleaned = folder.saved.slice(0, 10);
-
-            if (folder.folder_name === "History") {
-            // Normalize history structure
-            const cleanedHistory = cleaned.map(item => ({
-                id: item.id,
-                title: item.title,
-                poster_path: item.poster_path,
-                media_type: item.media_type,
-                watchedAt: item.watchedAt || new Date()
-            }));
-
-            newUser.history = cleanedHistory;
-            } else if (validFolders.includes(folder.folder_name)) {
-            newUser.folders.push({ folder_name: folder.folder_name, saved: cleaned });
+        const existing = await User.findOne({ email: normalizedEmail });
+        if (existing) {
+            if (existing.isVerified) {
+                return res.status(200).json({ message: "Email already registered", condition: false });
+            } else {
+                existing.username = username;
+                existing.password = hashedPassword;
+                existing.createdAt = new Date(); // reset TTL
+                existing.folders = [];
+                existing.history = [];
+                await existing.save();
+                userToUse = existing;
             }
-        });
         } else {
-        // No guest data — create empty default folders
-        newUser.folders.push({ folder_name: "Liked", saved: [] });
-        newUser.folders.push({ folder_name: "Watchlater", saved: [] });
+            userToUse = await User.create({
+                username,
+                email: normalizedEmail,
+                password: hashedPassword
+            });
         }
 
+        // Assign default or imported savedMovie data
+        if (Array.isArray(savedMovie) && savedMovie.length > 0) {
+            const validFolders = ["Liked", "Watchlater"];
+            savedMovie.forEach(folder => {
+                const cleaned = folder.saved.slice(0, 10);
+                if (folder.folder_name === "History") {
+                    const cleanedHistory = cleaned.map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        poster_path: item.poster_path,
+                        media_type: item.media_type,
+                        watchedAt: item.watchedAt || new Date()
+                    }));
+                    userToUse.history = cleanedHistory;
+                } else if (validFolders.includes(folder.folder_name)) {
+                    userToUse.folders.push({ folder_name: folder.folder_name, saved: cleaned });
+                }
+            });
+        } else {
+            userToUse.folders.push({ folder_name: "Liked", saved: [] });
+            userToUse.folders.push({ folder_name: "Watchlater", saved: [] });
+        }
 
-        await newUser.save();
-
+        await userToUse.save();
 
         const otp = await OTP.create({
-            userId: newUser._id,
+            userId: userToUse._id,
             otp: createOtp(),
             expiresAt: new Date(Date.now() + 10 * 60 * 1000)
         });
 
         const mail = {
-        from: emailUser,
-        to: newUser.email,
-        subject: "Stream Haven – Activate Your Account",
-        html: `
-            <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <div style="text-align: center;">
-            </div>
-            <h2 style="color: #333; text-align: center;">Welcome to Stream Haven 👋</h2>
-            <p style="font-size: 16px; color: #444; line-height: 1.5;">
-                Thank you for signing up! You're just one step away from joining a community that values <strong>freedom</strong>, <strong>privacy</strong>, and <strong>your voice</strong>.
-            </p>
-            <p style="font-size: 16px; color: #444; line-height: 1.5;">
-                Please click the button below to verify your email and activate your account:
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${serverAddress}/verify/${newUser.email}/${otp.otp}" target="_blank" style="background-color: #ff3b3f; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                Verify My Account
-                </a>
-            </div>
-            <p style="font-size: 14px; color: #666;">
-                If the button doesn't work, copy and paste the following link into your browser:
-                <br />
-                <a href="${serverAddress}/verify/${newUser.email}/${otp.otp}" style="color: #007BFF;">${serverAddress}/verify/${newUser.email}/${otp.otp}</a>
-            </p>
-            <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;" />
-            <p style="text-align: center; font-size: 13px; color: #999;">
-                &copy; ${new Date().getFullYear()} Stream Haven. All rights reserved.
-            </p>
-            </div>
-        `
+            from: emailUser,
+            to: userToUse.email,
+            subject: "Stream Haven – Activate Your Account",
+            html: `
+                <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="color: #333; text-align: center;">Welcome to Stream Haven 👋</h2>
+                    <p style="font-size: 16px; color: #444;">
+                        Thank you for signing up! Please verify your email within <strong>24 hours</strong> to keep your account active.
+                    </p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${serverAddress}/verify/${userToUse.email}/${otp.otp}" target="_blank"
+                           style="background-color: #ff3b3f; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
+                            Verify My Account
+                        </a>
+                    </div>
+                    <p style="font-size: 14px; color: #666;">
+                        Or copy and paste this link:<br>
+                        <a href="${serverAddress}/verify/${userToUse.email}/${otp.otp}">${serverAddress}/verify/${userToUse.email}/${otp.otp}</a>
+                    </p>
+                    <hr style="margin-top: 40px;">
+                    <p style="text-align: center; font-size: 13px; color: #999;">&copy; ${new Date().getFullYear()} Stream Haven</p>
+                </div>
+            `
         };
-
 
         transporter.sendMail(mail);
 
-        res.status(200).json({ message: "User registered. Please check your email.", condition: true });
+        const token = jwt.sign({ userId: userToUse._id }, jwtSecretKey, { expiresIn: "30d" });
+
+        return res.status(200).json({
+            message: "User registered. Please verify your email within 24 hours.",
+            token,
+            isVerified: userToUse.isVerified,
+            condition: true
+        });
+
     } catch (error) {
         console.error("Registration error:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
 
 // ========== LOGIN ==========
 router.post('/login', async (req, res) => {
@@ -172,7 +186,8 @@ router.post('/login', async (req, res) => {
 
         const user = await User.findOne({ email: normalizedEmail });
         if (!user) return res.status(200).json({ message: "No account found", condition: false });
-        if (!user.isVerified) return res.status(200).json({ message: "Account not verified", condition: false });
+        // if (!user.isVerified) return res.status(200).json({ message: "Account not verified", condition: false });
+        // Allow login even if not verified — verification status will be sent to frontend
 
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(200).json({ message: "Invalid credentials", condition: false });
@@ -182,10 +197,12 @@ router.post('/login', async (req, res) => {
         });
 
         res.status(200).json({
-            message: "Login successful",
+            message: user.isVerified ? "Login successful" : "Login successful, but email not verified",
             token,
+            isVerified: user.isVerified,
             condition: true
         });
+
     } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ message: "Internal Server Error" });
@@ -210,13 +227,18 @@ router.post('/check-auth', async (req, res) => {
 
         const user = await User.findById(decoded.userId);
         if (!user) return res.status(200).json({ message: "Invalid token or user not found", condition: false });
-
+        const ttlMs = 15 * 24 * 60 * 60 * 1000;
         res.status(200).json({
             message: "User authenticated",
             username: user.username,
-            profile : user. profile || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
-            condition: true
-        });
+            profile: user.profile || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
+            isVerified: user.isVerified,
+            condition: true,
+            expiresIn: !user.isVerified
+                ? Math.max(0, ttlMs - (Date.now() - new Date(user.createdAt).getTime()))
+                : null
+            });
+
     } catch (error) {
         console.error("Check-auth error:", error);
         res.status(500).json({ message: "Internal Server Error" });
@@ -389,5 +411,29 @@ router.post('/resetpass', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+// =========== verify status ===============
+router.get("/verify-status", authMiddleware, (req, res) => {
+  try {
+    const { email, isVerified, createdAt } = req.user;
+
+    const TTL_MS = 15 * 24 * 60 * 60 * 1000; // 15 days in milliseconds
+    const expiresIn = !isVerified
+      ? Math.max(0, TTL_MS - (Date.now() - new Date(createdAt).getTime()))
+      : null;
+
+    res.status(200).json({
+      email,
+      isVerified,
+      expiresIn,
+      condition: true,
+    });
+  } catch (err) {
+    console.error("verify-status error:", err.message);
+    res.status(500).json({ message: "Server error", condition: false });
+  }
+});
+
+
 
 export default router;

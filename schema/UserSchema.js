@@ -7,7 +7,6 @@ const userSchema = new mongoose.Schema({
     isVerified : {type:Boolean, default : false},
     haveUploaded : {type : Boolean, default : false},
     joined : {type : Date, default : Date.now},
-    createdAt: { type: Date, default: Date.now, expires: 86400 },
     isBlocked: { type: Boolean, default: false },
     profile: { type: String, default: "" },
     profileId: { type: String, default: "" },
@@ -41,7 +40,9 @@ const userSchema = new mongoose.Schema({
                 media_type : {type : String}
             }]
         }
-    ]
+    ],
+    createdAt: { type: Date, default: Date.now }
+
 })
 
 const User = mongoose.model("User", userSchema)
