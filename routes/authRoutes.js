@@ -10,6 +10,7 @@ import passport from 'passport';
 import '../utils/googlePassport.js'
 
 import dotenv from "dotenv"
+import { syncIfNeeded } from '../utils/syncHelper.js.js';
 dotenv.config();
 
 const jwtSecretKey = process.env.JWT_SECRET_KEY
@@ -236,6 +237,8 @@ router.post('/check-auth', async (req, res) => {
 
         const user = await User.findById(decoded.userId);
         if (!user) return res.status(200).json({ message: "Invalid token or user not found", condition: false });
+        await syncIfNeeded();
+
         const ttlMs = 15 * 24 * 60 * 60 * 1000;
         res.status(200).json({
             message: "User authenticated",

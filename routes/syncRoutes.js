@@ -83,19 +83,20 @@ router.get('/trending', async (req, res) => {
 
         const formatPoster = (path) => path ? `https://image.tmdb.org/t/p/w500${path}` : null;
 
-        const formatted = [...movieDetails, ...tvDetails].map(item => ({
-            id: item.id,
-            title: item.title || item.name,
-            media_type: item.title ? "MV" : "SR",
-            overview: item.overview,
-            genre_ids: item.genres?.map(g => g.id),
-            popularity: item.popularity,
-            vote_average: item.vote_average,
-            vote_count: item.vote_count,
-            release_date: item.release_date || item.first_air_date,
-            poster_path: formatPoster(item.poster_path),
-            updatedAt: new Date()
-        }));
+      const formatted = [...movieDetails, ...tvDetails].map((item) => ({
+        id: item.id,
+        title: item.title || item.name,
+        media_type: item.title ? "MV" : "SR",
+        overview: item.overview,
+        genres: item.genres || [],
+        vote_average: item.vote_average,
+        vote_count: item.vote_count,
+        release_date: item.release_date || item.first_air_date,
+        poster_path: formatPoster(item.poster_path),
+        backdrop_path: formatPoster(item.backdrop_path),
+        runtime: item.runtime || null,
+        seasons: item.seasons || [],
+      }));
 
         await Media.bulkWrite(
             formatted.map(doc => ({
