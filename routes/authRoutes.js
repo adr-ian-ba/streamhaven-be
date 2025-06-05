@@ -15,7 +15,7 @@ dotenv.config();
 const jwtSecretKey = process.env.JWT_SECRET_KEY
 const emailUser = process.env.EMAIL_USER
 const emailPass = process.env.EMAIL_PASS
-const serverAddress = process.env.SERVER_ADDRESS
+const serverAddressFe = process.env.SERVER_ADDRESS_FE
 
 
 const router = express.Router();
@@ -143,14 +143,14 @@ router.post('/register', async (req, res) => {
                         Thank you for signing up! Please verify your email within <strong>24 hours</strong> to keep your account active.
                     </p>
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="${serverAddress}/verify/${userToUse.email}/${otp.otp}" target="_blank"
+                        <a href="${serverAddressFe}/verify/${userToUse.email}/${otp.otp}" target="_blank"
                            style="background-color: #ff3b3f; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
                             Verify My Account
                         </a>
                     </div>
                     <p style="font-size: 14px; color: #666;">
                         Or copy and paste this link:<br>
-                        <a href="${serverAddress}/verify/${userToUse.email}/${otp.otp}">${serverAddress}/verify/${userToUse.email}/${otp.otp}</a>
+                        <a href="${serverAddressFe}/verify/${userToUse.email}/${otp.otp}">${serverAddressFe}/verify/${userToUse.email}/${otp.otp}</a>
                     </p>
                     <hr style="margin-top: 40px;">
                     <p style="text-align: center; font-size: 13px; color: #999;">&copy; ${new Date().getFullYear()} Stream Haven</p>
@@ -287,14 +287,14 @@ const mail = {
                 Please click the button below to verify your email and activate your account:
             </p>
             <div style="text-align: center; margin: 30px 0;">
-                <a href="${serverAddress}/verify/${user.email}/${otp.otp}" target="_blank" style="background-color: #ff3b3f; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                <a href="${serverAddressFe}/verify/${user.email}/${otp.otp}" target="_blank" style="background-color: #ff3b3f; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                 Verify My Account
                 </a>
             </div>
             <p style="font-size: 14px; color: #666;">
                 If the button doesn't work, copy and paste the following link into your browser:
                 <br />
-                <a href="${serverAddress}/verify/${user.email}/${otp.otp}" style="color: #007BFF;">${serverAddress}/verify/${user.email}/${otp.otp}</a>
+                <a href="${serverAddressFe}/verify/${user.email}/${otp.otp}" style="color: #007BFF;">${serverAddressFe}/verify/${user.email}/${otp.otp}</a>
             </p>
             <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;" />
             <p style="text-align: center; font-size: 13px; color: #999;">
@@ -453,7 +453,7 @@ router.get('/google/callback',
   (req, res) => {
     // const token = req.user._id;
     const token = jwt.sign({ userId: req.user._id }, jwtSecretKey, { expiresIn: '7d' });
-    res.redirect(`http://localhost:5173?token=${token}`);
+    res.redirect(`${serverAddressFe}?token=${token}`);
 
   });
 
