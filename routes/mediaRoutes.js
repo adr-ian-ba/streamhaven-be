@@ -185,4 +185,98 @@ router.get('/search/:page?', async (req, res) => {
     }
 });
 
+// ========== Keyword ==========
+router.get('/keywords', async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.status(400).json({ condition: false, message: "Missing query" });
+
+  try {
+    const result = await apiHelper.get(`/search/keyword?query=${encodeURIComponent(query)}`);
+    res.json({ condition: true, keywords: result.results });
+  } catch (err) {
+    console.error("Keyword search error:", err);
+    res.status(500).json({ condition: false, message: "Failed to fetch keywords" });
+  }
+});
+
+
+// ========== Genres ==========
+router.get('/genres', async (req, res) => {
+  try {
+    const genres = await Genre.find({}, { _id: 0, tmdbId: 1, name: 1 }).sort({ name: 1 });
+    res.json({ condition: true, genres });
+  } catch (err) {
+    res.status(500).json({ condition: false, message: "Failed to fetch genres" });
+  }
+});
+
+// ========== Languages ==========
+router.get('/languages', async (req, res) => {
+  try {
+    const result = await apiHelper.get("/configuration/languages");
+    res.json({ condition: true, languages: result });
+  } catch (err) {
+    res.status(500).json({ condition: false, message: "Failed to fetch languages" });
+  }
+});
+
+// ========= DISCOVER FILTER =========
+router.post('/discover', async (req, res) => {
+  const {
+    type,
+    genres,
+    keywords,
+    language,
+    releaseYear,
+    voteAverageGte,
+    voteAverageLte,
+    runtimeGte,
+    runtimeLte,
+    includeAdult = false,
+    sortBy = "popularity.desc",
+    page = 1
+  } = req.body;
+
+  try {
+    const queryParams = new URLSearchParams({
+      sort_by: sortBy,
+      include_adult: includeAdult,
+      include_video: false,
+      page,
+      language: "en-US"
+    });
+
+    if (genres?.length) queryParams.append("with_genres", genres.join(","));
+    if (keywords) queryParams.append("with_keywords", keywords);
+    if (language) queryParams.append("with_original_language", language);
+    if (releaseYear) queryParams.append("primary_release_year", releaseYear);
+    if (voteAverageGte) queryParams.append("vote_average.gte", voteAverageGte);
+    if (voteAverageLte) queryParams.append("vote_average.lte", voteAverageLte);
+    if (runtimeGte) queryParams.append("with_runtime.gte", runtimeGte);
+    if (runtimeLte) queryParams.append("with_runtime.lte", runtimeLte);
+
+    const endpoint = type === "SR" ? `/discover/tv` : `/discover/movie`;
+    const raw = await apiHelper.get(`${endpoint}?${queryParams.toString()}`);
+
+    const formatted = await Promise.all(
+      (raw.results || []).map(movie => formatMovie(movie, type))
+    );
+
+    res.json({
+      condition: true,
+      result: {
+        page: raw.page,
+        total_pages: raw.total_pages,
+        total_results: raw.total_results,
+        results: formatted
+      }
+    });
+  } catch (err) {
+    console.error("Discover format error:", err);
+    res.status(500).json({ condition: false, message: "Failed to fetch discoveries" });
+  }
+});
+
+
+
 export default router;
