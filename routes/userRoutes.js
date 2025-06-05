@@ -276,8 +276,12 @@ router.post('/clearhistory', authMiddleware, async (req, res) => {
   res.status(200).json({ message: "All history cleared", condition: true });
 });
 
-// ========== upload avatar ==========
+// ========== Upload Avatar ==========
 router.post('/upload-avatar', authMiddleware, upload.single("avatar"), async (req, res) => {
+  if (!req.user || !req.user.isVerified) {
+    return res.status(403).json({ condition: false, message: "Account not verified" });
+  }
+
   const filePath = req.file.path;
   const fileName = `avatar-${req.user._id}.jpg`;
 
@@ -305,6 +309,10 @@ router.post('/upload-avatar', authMiddleware, upload.single("avatar"), async (re
 
 // ========== Delete Avatar ==========
 router.delete('/delete-avatar', authMiddleware, async (req, res) => {
+  if (!req.user || !req.user.isVerified) {
+    return res.status(403).json({ condition: false, message: "Account not verified" });
+  }
+
   try {
     if (!req.user.profileId) {
       return res.status(400).json({ condition: false, message: "No avatar to delete" });
@@ -322,6 +330,7 @@ router.delete('/delete-avatar', authMiddleware, async (req, res) => {
     res.status(500).json({ condition: false, message: "Failed to delete avatar" });
   }
 });
+
 
 
 
