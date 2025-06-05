@@ -41,8 +41,12 @@ const userSchema = new mongoose.Schema({
             }]
         }
     ],
+    loginMethod: {
+        type: String,
+        enum: ['email', 'google'],
+        default: 'email'
+    },
     createdAt: { type: Date, default: Date.now }
-
 })
 
 const User = mongoose.model("User", userSchema)

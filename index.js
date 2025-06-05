@@ -3,6 +3,8 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import session from 'express-session';
+import passport from 'passport';
 
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -21,6 +23,14 @@ app.use(cors({
   origin: ['https://streamhaven.onrender.com', 'http://localhost:5173'],
   credentials: true
 }));
+app.use(session({
+  secret: process.env.JWT_SECRET_KEY || "kjsd(#J8f{];vn87(*983rCOUYWN(*);})",
+  resave: false,
+  saveUninitialized: false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.json());
 app.use(express.text());
 

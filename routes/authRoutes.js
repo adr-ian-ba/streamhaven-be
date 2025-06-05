@@ -6,6 +6,8 @@ import User from '../schema/UserSchema.js';
 import nodemailer from 'nodemailer';
 import { deleteFromDrive } from '../utils/googleDrive.js';
 import authMiddleware from '../middleware/authMIddleware.js';
+import passport from 'passport';
+import '../utils/googlePassport.js'
 
 import dotenv from "dotenv"
 dotenv.config();
@@ -188,7 +190,12 @@ router.post('/login', async (req, res) => {
         if (!user) return res.status(200).json({ message: "No account found", condition: false });
         // if (!user.isVerified) return res.status(200).json({ message: "Account not verified", condition: false });
         // Allow login even if not verified — verification status will be sent to frontend
-
+        if (user.password === "GOOGLE_AUTH") {
+            return res.status(200).json({
+                message: "This account uses Google login. Please sign in with Google.",
+                condition: false
+            });
+            }
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(200).json({ message: "Invalid credentials", condition: false });
 
@@ -213,11 +220,13 @@ router.post('/login', async (req, res) => {
 router.post('/check-auth', async (req, res) => {
     try {
         const { token } = req.body;
+        console.log("check auth")
         if (!token) return res.status(200).json({ message: "No token provided", condition: false });
 
         let decoded;
         try {
             decoded = jwt.verify(token, jwtSecretKey);
+            console.log(decoded)
         } catch (err) {
             if (err.name === "TokenExpiredError") {
                 return res.status(401).json({ message: "Token expired", condition: false });
@@ -434,6 +443,22 @@ router.get("/verify-status", authMiddleware, (req, res) => {
   }
 });
 
+//============ Google ===============
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
 
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: '/auth/failure' }),
+  (req, res) => {
+    // const token = req.user._id;
+    const token = jwt.sign({ userId: req.user._id }, jwtSecretKey, { expiresIn: '7d' });
+    res.redirect(`http://localhost:5173?token=${token}`);
+
+  });
+
+router.get('/failure', (req, res) => {
+  res.status(401).json({ message: 'Google login failed' });
+});
 
 export default router;
