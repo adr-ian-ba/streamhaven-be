@@ -97,69 +97,100 @@ router.get('/get-detail/:id/:type/:ss?', async (req, res) => {
 });
 
 // ========== Get movies/series list ==========
-router.get('/getmovies/:type/:category?/:page?', async (req, res) => {
+router.get("/getmovies/:type/:category?/:page?", async (req, res) => {
+  try {
     const { type, category, page } = req.params;
 
-    try {
-        const buildResult = async (endpoint, mediaType) => {
-            const result = await apiHelper.get(endpoint);
-            const formatted = await Promise.all(result.results.map(m => formatMovie(m, mediaType)));
-            return { ...result, results: formatted };
+    const movieCategories = {
+      "now-playing": "/movie/now_playing",
+      "popular": "/movie/popular",
+      "trending": "/movie/top_rated",
+      "upcoming": "/movie/upcoming",
+    };
+
+    const seriesCategories = {
+      "top": "/tv/top_rated",
+      "popular": "/tv/popular",
+      "airing": "/tv/airing_today",
+      "next-seven": "/tv/on_the_air",
+    };
+
+    if (type === "MV") {
+      if (category && page) {
+        const endpoint = movieCategories[category];
+        if (!endpoint) {
+          return res.status(400).json({ message: "Invalid movie category", condition: false });
+        }
+
+        const result = await apiHelper.get(`${endpoint}?language=en-US&page=${page}`);
+        const finalResult = {
+          ...result,
+          results: await Promise.all(result.results.map((m) => formatMovie(m, "MV"))),
         };
 
-        if (type === "MV") {
-            if (category && page) {
-                let endpoint = `/movie/${category}?language=en-US&page=${page}`;
-                if (category === "trending") endpoint = `/movie/top_rated?language=en-US&page=${page}`;
-                const data = await buildResult(endpoint, "MV");
-                return res.status(200).json({ message: "Success", condition: true, result: data });
-            } else {
-                const [now, popular, top, upcoming] = await Promise.all([
-                    buildResult("/movie/now_playing?language=en-US&page=1", "MV"),
-                    buildResult("/movie/popular?language=en-US&page=1", "MV"),
-                    buildResult("/movie/top_rated?language=en-US&page=1", "MV"),
-                    buildResult("/movie/upcoming?language=en-US&page=1", "MV")
-                ]);
-                return res.status(200).json({ message: "Success", condition: true, result: { now: now.results, popular: popular.results, top: top.results, upcoming: upcoming.results } });
-            }
-        }
-            else if (type === "SR") {
-                if (category && page) {
-                    let endpoint = `/tv/${category}?language=en-US&page=${page}`;
-                    if (category === "top") endpoint = `/tv/top_rated?language=en-US&page=${page}`;
-                    if (category === "airing") endpoint = `/tv/airing_today?language=en-US&page=${page}`;
-                    if (category === "next-seven") endpoint = `/tv/on_the_air?language=en-US&page=${page}`;
+        return res.status(200).json({ message: "Movie Fetch Success", condition: true, result: finalResult });
+      }
 
-                    const data = await buildResult(endpoint, "SR");
-                    return res.status(200).json({ message: "Success", condition: true, result: data });
-                } else {
-                    const [popular, top, airing, nextSeven] = await Promise.all([
-                        buildResult("/tv/popular?language=en-US&page=1", "SR"),
-                        buildResult("/tv/top_rated?language=en-US&page=1", "SR"),
-                        buildResult("/tv/airing_today?language=en-US&page=1", "SR"),
-                        buildResult("/tv/on_the_air?language=en-US&page=1", "SR"),
-                    ]);
+      // If no category and page: fetch all default categories
+      const [now, popular, top, upcoming] = await Promise.all([
+        apiHelper.get("/movie/now_playing?language=en-US&page=1"),
+        apiHelper.get("/movie/popular?language=en-US&page=1"),
+        apiHelper.get("/movie/top_rated?language=en-US&page=1"),
+        apiHelper.get("/movie/upcoming?language=en-US&page=1"),
+      ]);
 
-                    return res.status(200).json({
-                        message: "Success",
-                        condition: true,
-                        result: {
-                            popular: popular.results,
-                            top: top.results,
-                            airing: airing.results,
-                            nextSeven: nextSeven.results,
-                        }
-                    });
-                }
-            }
+      const result = {
+        now: await Promise.all(now.results.map((m) => formatMovie(m, "MV"))),
+        popular: await Promise.all(popular.results.map((m) => formatMovie(m, "MV"))),
+        top: await Promise.all(top.results.map((m) => formatMovie(m, "MV"))),
+        upcoming: await Promise.all(upcoming.results.map((m) => formatMovie(m, "MV"))),
+      };
 
-
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Error fetching list", condition: false });
+      return res.status(200).json({ message: "Movie Fetch Success", condition: true, result });
     }
+
+    if (type === "SR") {
+      if (category && page) {
+        const endpoint = seriesCategories[category];
+        if (!endpoint) {
+          return res.status(400).json({ message: "Invalid series category", condition: false });
+        }
+
+        const result = await apiHelper.get(`${endpoint}?language=en-US&page=${page}`);
+        const finalResult = {
+          ...result,
+          results: await Promise.all(result.results.map((s) => formatMovie(s, "SR"))),
+        };
+
+        return res.status(200).json({ message: "Series Fetch Success", condition: true, result: finalResult });
+      }
+
+      // If no category and page: fetch all default series categories
+      const [popular, top, airing, nextSeven] = await Promise.all([
+        apiHelper.get("/tv/popular?language=en-US&page=1"),
+        apiHelper.get("/tv/top_rated?language=en-US&page=1"),
+        apiHelper.get("/tv/airing_today?language=en-US&page=1"),
+        apiHelper.get("/tv/on_the_air?language=en-US&page=1"),
+      ]);
+
+      const result = {
+        popular: await Promise.all(popular.results.map((s) => formatMovie(s, "SR"))),
+        top: await Promise.all(top.results.map((s) => formatMovie(s, "SR"))),
+        airing: await Promise.all(airing.results.map((s) => formatMovie(s, "SR"))),
+        nextSeven: await Promise.all(nextSeven.results.map((s) => formatMovie(s, "SR"))),
+      };
+
+      return res.status(200).json({ message: "Series Fetch Success", condition: true, result });
+    }
+
+    return res.status(400).json({ message: "Invalid media type", condition: false });
+
+  } catch (error) {
+    console.error("Error fetching media:", error);
+    res.status(500).json({ message: "Internal server error", condition: false });
+  }
 });
+
 
 // ========== Search ==========
 router.get('/search/:page?', async (req, res) => {
