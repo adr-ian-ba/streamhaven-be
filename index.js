@@ -19,16 +19,23 @@ const mongodbLink = process.env.MONGODB_CONNECTION_LINK_LEGACY
 
 const app = express();
 
+
 app.use(cors({
-  origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
+  origin: '*',
   credentials: true
 }));
 
-// 👇 Handle preflight requests
-app.options('*', cors({
-  origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
-  credentials: true
-}));
+
+// app.use(cors({
+//   origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
+//   credentials: true
+// }));
+
+// // 👇 Handle preflight requests
+// app.options('*', cors({
+//   origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
+//   credentials: true
+// }));
 
 
 app.use(session({
