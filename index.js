@@ -23,6 +23,14 @@ app.use(cors({
   origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
   credentials: true
 }));
+
+// 👇 Handle preflight requests
+app.options('*', cors({
+  origin: ['https://streamhaven.onrender.com', 'http://localhost:5173', 'https://streamhaven.nusagitra.web.id'],
+  credentials: true
+}));
+
+
 app.use(session({
   secret: process.env.JWT_SECRET_KEY || "kjsd(#J8f{];vn87(*983rCOUYWN(*);})",
   resave: false,
