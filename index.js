@@ -19,12 +19,13 @@ const mongodbLink = process.env.MONGODB_CONNECTION_LINK_LEGACY
 
 const app = express();
 
-
+app.set('trust proxy', 1);
 // app.use(cors({
 //   origin: '*',
 //   credentials: true
 // }));
-app.set('trust proxy', true);
+
+
 
 
 app.use(cors({
