@@ -90,7 +90,7 @@ async function startServer() {
         );
         console.log('TTL index for unverified users created');
 
-        app.listen(3001, () => console.log('Server started on port 3000'));
+        app.listen(3001, () => console.log('Server started on port 3001'));
     } catch (err) {
         console.error('DB Connection Error:', err);
         process.exit(1);

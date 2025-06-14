@@ -1,13 +1,17 @@
-import apiHelper from '../utils/ApiHelper.js';
+import ApiHelper from './ApiHelper.js';
 import Genre from '../schema/GenreSchema.js';
 import Media from '../schema/MediaSchema.js';
+import dotenv from "dotenv"
+dotenv.config();
 
+const tmdbLink = process.env.TMDB_LINK 
+const tmdbApiKey = process.env.TMDB_API_KEY
+
+const apiHelper = new ApiHelper(tmdbLink, tmdbApiKey);
 const syncStatus = {
   genres: null,
   trending: null,
 };
-
-
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 

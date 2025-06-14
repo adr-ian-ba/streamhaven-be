@@ -10,7 +10,7 @@ import passport from 'passport';
 import '../utils/googlePassport.js'
 
 import dotenv from "dotenv"
-import { syncIfNeeded } from '../utils/syncHelper.js.js';
+import { syncIfNeeded } from '../utils/syncHelper.js';
 dotenv.config();
 
 const jwtSecretKey = process.env.JWT_SECRET_KEY
