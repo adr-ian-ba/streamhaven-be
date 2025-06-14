@@ -24,6 +24,7 @@ const app = express();
 //   origin: '*',
 //   credentials: true
 // }));
+app.set('trust proxy', true);
 
 
 app.use(cors({
